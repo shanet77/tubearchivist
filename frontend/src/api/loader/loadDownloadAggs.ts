@@ -12,9 +12,15 @@ export type DownloadAggsType = {
   buckets: DownloadAggsBucket[];
 };
 
-const loadDownloadAggs = async (showIgnored: boolean) => {
+const loadDownloadAggs = async (
+  showIgnored: boolean,
+  published_gte: string | null,
+  published_lte: string | null,
+) => {
   const searchParams = new URLSearchParams();
   searchParams.append('filter', showIgnored ? 'ignore' : 'pending');
+  if (published_gte) searchParams.append('published_gte', published_gte);
+  if (published_lte) searchParams.append('published_lte', published_lte);
   return APIClient<DownloadAggsType>(
     `/api/download/aggs/${searchParams.toString() ? `?${searchParams.toString()}` : ''}`,
   );

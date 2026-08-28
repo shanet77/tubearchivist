@@ -51,6 +51,14 @@ class DownloadListQuerySerializer(
     page = serializers.IntegerField(required=False)
     q = serializers.CharField(required=False, help_text="Search Query")
     error = serializers.BooleanField(required=False, allow_null=True)
+    published_gte = serializers.DateField(
+        required=False,
+        help_text="published date lower bound, format YYYY-MM-DD",
+    )
+    published_lte = serializers.DateField(
+        required=False,
+        help_text="published date upper bound, format YYYY-MM-DD",
+    )
 
 
 class DownloadListQueueDeleteQuerySerializer(serializers.Serializer):
@@ -60,6 +68,14 @@ class DownloadListQueueDeleteQuerySerializer(serializers.Serializer):
     channel = serializers.CharField(required=False, help_text="channel ID")
     vid_type = serializers.ChoiceField(
         choices=VideoTypeEnum.values_known(), required=False
+    )
+    published_gte = serializers.DateField(
+        required=False,
+        help_text="published date lower bound, format YYYY-MM-DD",
+    )
+    published_lte = serializers.DateField(
+        required=False,
+        help_text="published date upper bound, format YYYY-MM-DD",
     )
 
 
@@ -93,6 +109,14 @@ class BulkUpdateDowloadQuerySerializer(serializers.Serializer):
         choices=VideoTypeEnum.values_known(), required=False
     )
     error = serializers.BooleanField(required=False, allow_null=True)
+    published_gte = serializers.DateField(
+        required=False,
+        help_text="published date lower bound, format YYYY-MM-DD",
+    )
+    published_lte = serializers.DateField(
+        required=False,
+        help_text="published date upper bound, format YYYY-MM-DD",
+    )
 
 
 class BulkUpdateDowloadDataSerializer(serializers.Serializer):

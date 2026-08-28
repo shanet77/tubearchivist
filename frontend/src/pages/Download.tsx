@@ -59,6 +59,8 @@ const Download = () => {
   const ignoredOnlyParam = searchParams.get('ignored');
   const vidTypeFilterFromUrl = searchParams.get('vid-type');
   const errorFilterFromUrl = searchParams.get('error');
+  const publishedGteFromUrl = searchParams.get('published-gte');
+  const publishedLteFromUrl = searchParams.get('published-lte');
 
   const [refreshNonce, setRefreshNonce] = useState(0);
   const [showHiddenForm, setShowHiddenForm] = useState(false);
@@ -117,6 +119,16 @@ const Download = () => {
     setRefreshNonce(current => current + 1);
   };
 
+  const handlePublishedDateChange = (param: string, value: string) => {
+    const params = searchParams;
+    if (value) {
+      params.set(param, value);
+    } else {
+      params.delete(param);
+    }
+    setSearchParams(params);
+  };
+
   useEffect(() => {
     (async () => {
       const videosResponse = await loadDownloadQueue(
@@ -126,6 +138,8 @@ const Download = () => {
         errorFilterFromUrl,
         showIgnored,
         searchInput,
+        publishedGteFromUrl,
+        publishedLteFromUrl,
       );
       const { data: channelResponseData } = videosResponse ?? {};
       const videoCount = channelResponseData?.paginate?.total_hits;
@@ -146,15 +160,21 @@ const Download = () => {
     showIgnored,
     searchInput,
     refreshNonce,
+    publishedGteFromUrl,
+    publishedLteFromUrl,
   ]);
 
   useEffect(() => {
     (async () => {
-      const downloadAggs = await loadDownloadAggs(showIgnored);
+      const downloadAggs = await loadDownloadAggs(
+        showIgnored,
+        publishedGteFromUrl,
+        publishedLteFromUrl,
+      );
 
       setDownloadAggsResponse(downloadAggs);
     })();
-  }, [lastVideoCount, showIgnored]);
+  }, [lastVideoCount, showIgnored, publishedGteFromUrl, publishedLteFromUrl]);
 
   const handleBulkStatusUpdate = async (status: DownloadQueueStatus) => {
     await updateDownloadQueueByFilter(
@@ -163,6 +183,8 @@ const Download = () => {
       vidTypeFilterFromUrl,
       errorFilterFromUrl,
       status,
+      publishedGteFromUrl,
+      publishedLteFromUrl,
     );
     refreshDownloadQueue();
   };
@@ -481,6 +503,26 @@ const Download = () => {
               <option value="true">has error</option>
               <option value="false">has no error</option>
             </select>
+            <span>Published between</span>
+            <input
+              type="date"
+              name="published_gte"
+              title="published date lower bound"
+              value={publishedGteFromUrl || ''}
+              onChange={event =>
+                handlePublishedDateChange('published-gte', event.currentTarget.value)
+              }
+            />
+            <span>and</span>
+            <input
+              type="date"
+              name="published_lte"
+              title="published date upper bound"
+              value={publishedLteFromUrl || ''}
+              onChange={event =>
+                handlePublishedDateChange('published-lte', event.currentTarget.value)
+              }
+            />
             <input
               type="text"
               placeholder="Search..."
@@ -510,6 +552,26 @@ const Download = () => {
                   and by error state: <i>'{errorFilterFromUrl}'</i>
                 </span>
               )}
+              {(publishedGteFromUrl || publishedLteFromUrl) && (
+                <span>
+                  {' '}
+                  and published{' '}
+                  {publishedGteFromUrl ? (
+                    <>
+                      from <i>{publishedGteFromUrl}</i>{' '}
+                    </>
+                  ) : (
+                    ''
+                  )}
+                  {publishedLteFromUrl ? (
+                    <>
+                      to <i>{publishedLteFromUrl}</i>
+                    </>
+                  ) : (
+                    ''
+                  )}
+                </span>
+              )}
             </p>
             <div>
               {showIgnored ? (
@@ -536,6 +598,8 @@ const Download = () => {
                         showIgnoredFilter,
                         channelFilterFromUrl,
                         vidTypeFilterFromUrl,
+                        publishedGteFromUrl,
+                        publishedLteFromUrl,
                       );
                       refreshDownloadQueue();
                       setShowDeleteConfirm(false);

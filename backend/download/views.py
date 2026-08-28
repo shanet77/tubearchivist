@@ -17,7 +17,7 @@ from download.serializers import (
     DownloadListSerializer,
     DownloadQueueItemUpdateSerializer,
 )
-from download.src.queue_interact import PendingInteract
+from download.src.queue_interact import PendingInteract, build_published_range
 from drf_spectacular.utils import OpenApiResponse, extend_schema
 from rest_framework.response import Response
 from task.tasks import download_pending, extrac_dl
@@ -82,6 +82,13 @@ class DownloadApiListView(ApiBaseView):
             must_list.append(
                 {"bool": {operator: [{"exists": {"field": "message"}}]}}
             )
+
+        published_range = build_published_range(
+            published_gte=validated_data.get("published_gte"),
+            published_lte=validated_data.get("published_lte"),
+        )
+        if published_range:
+            must_list.append({"range": published_range})
 
         self.data["query"] = {"bool": {"must": must_list}}
 
@@ -163,6 +170,8 @@ class DownloadApiListView(ApiBaseView):
             vid_type=validated_query.get("vid_type"),
             new_status=validated_data["status"],
             error=validated_query.get("error"),
+            published_gte=validated_query.get("published_gte"),
+            published_lte=validated_query.get("published_lte"),
         )
 
         if new_status == "priority":
@@ -198,7 +207,10 @@ class DownloadApiListView(ApiBaseView):
 
         print(message)
         PendingInteract(status=query_filter).delete_bulk(
-            channel_id=channel, vid_type=vid_type
+            channel_id=channel,
+            vid_type=vid_type,
+            published_gte=validated_query.get("published_gte"),
+            published_lte=validated_query.get("published_lte"),
         )
 
         return Response(status=204)
@@ -323,17 +335,24 @@ class DownloadAggsApiView(ApiBaseView):
         serializer.is_valid(raise_exception=True)
         validated_query = serializer.validated_data
 
+        must_list = []
         filter_view = validated_query.get("filter")
         if filter_view:
             if filter_view not in self.valid_filter_view:
                 message = f"invalid filter: {filter_view}"
                 return Response({"message": message}, status=400)
 
-            self.data.update(
-                {
-                    "query": {"term": {"status": {"value": filter_view}}},
-                }
-            )
+            must_list.append({"term": {"status": {"value": filter_view}}})
+
+        published_range = build_published_range(
+            published_gte=validated_query.get("published_gte"),
+            published_lte=validated_query.get("published_lte"),
+        )
+        if published_range:
+            must_list.append({"range": published_range})
+
+        if must_list:
+            self.data.update({"query": {"bool": {"must": must_list}}})
 
         self.data.update(
             {

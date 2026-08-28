@@ -1,6 +1,29 @@
 """interact with queue items"""
 
+from datetime import date
+
 from common.src.es_connect import ElasticWrap
+
+
+def build_published_range(
+    published_gte: date | None = None,
+    published_lte: date | None = None,
+) -> dict | None:
+    """build range filter for published date, None if no bound is set"""
+    if published_gte is None and published_lte is None:
+        return None
+
+    range_filter: dict = {"published": {}}
+    if published_gte is not None:
+        range_filter["published"]["gte"] = published_gte.isoformat()
+
+    if published_lte is not None:
+        # end of day, so the upper bound includes the whole day
+        range_filter["published"]["lte"] = (
+            published_lte.isoformat() + "T23:59:59"
+        )
+
+    return range_filter
 
 
 class PendingInteract:
@@ -15,7 +38,13 @@ class PendingInteract:
         path = f"ta_download/_doc/{self.youtube_id}"
         _, _ = ElasticWrap(path).delete(refresh=True, print_error=print_error)
 
-    def delete_bulk(self, channel_id: str | None, vid_type: str | None):
+    def delete_bulk(
+        self,
+        channel_id: str | None,
+        vid_type: str | None,
+        published_gte: date | None = None,
+        published_lte: date | None = None,
+    ):
         """delete all matching item by status"""
         must_list = [{"term": {"status": {"value": self.status}}}]
         if channel_id:
@@ -23,6 +52,10 @@ class PendingInteract:
 
         if vid_type:
             must_list.append({"term": {"vid_type": {"value": vid_type}}})
+
+        published_range = build_published_range(published_gte, published_lte)
+        if published_range:
+            must_list.append({"range": published_range})
 
         data = {"query": {"bool": {"must": must_list}}}
 
@@ -35,6 +68,8 @@ class PendingInteract:
         vid_type: str | None,
         new_status: str,
         error: bool | None = None,
+        published_gte: date | None = None,
+        published_lte: date | None = None,
     ):
         """update status in bulk"""
         must_list = [{"term": {"status": {"value": self.status}}}]
@@ -45,6 +80,10 @@ class PendingInteract:
 
         if vid_type:
             must_list.append({"term": {"vid_type": {"value": vid_type}}})
+
+        published_range = build_published_range(published_gte, published_lte)
+        if published_range:
+            must_list.append({"range": published_range})
 
         if error is not None:
             exists = {"exists": {"field": "message"}}

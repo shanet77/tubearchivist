@@ -8,6 +8,8 @@ const loadDownloadQueue = async (
   errorFilterFromUrl: string | null,
   showIgnored: boolean,
   search: string,
+  published_gte: string | null,
+  published_lte: string | null,
 ) => {
   const searchParams = new URLSearchParams();
 
@@ -16,6 +18,8 @@ const loadDownloadQueue = async (
   if (vid_type) searchParams.append('vid_type', vid_type);
   if (search) searchParams.append('q', encodeURIComponent(search));
   if (errorFilterFromUrl !== null) searchParams.append('error', errorFilterFromUrl);
+  if (published_gte) searchParams.append('published_gte', published_gte);
+  if (published_lte) searchParams.append('published_lte', published_lte);
   searchParams.append('filter', showIgnored ? 'ignore' : 'pending');
 
   const endpoint = `/api/download/${searchParams.toString() ? `?${searchParams.toString()}` : ''}`;
